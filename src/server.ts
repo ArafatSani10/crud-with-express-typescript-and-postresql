@@ -104,7 +104,7 @@ app.get("/users", async (req: Request, res: Response) => {
     }
 });
 
-// user get his id
+// single user get
 
 app.get("/users/:id", async (req: Request, res: Response) => {
     try {
@@ -133,6 +133,76 @@ app.get("/users/:id", async (req: Request, res: Response) => {
         });
     };
 });
+
+
+// update user PUT 
+
+app.put("/users/:id", async (req: Request, res: Response) => {
+    const { name, email } = req.body;
+    try {
+        const result = await pool.query(`UPDATE users SET name = $1, email =$2 WHERE id =$3 RETURNING *`, [name, email, req.params.id]);
+
+        if (result.rows.length === 0) {
+            res.status(404).json({
+                success: false,
+                message: "404! User  Not found..!"
+            });
+        }
+
+        else {
+            res.status(200).json({
+                succes: true,
+                message: "User Updated Succesfully...!",
+                data: result.rows[0],
+            });
+        };
+    }
+
+    catch (err: any) {
+        res.status(500).json({
+            succes: false,
+            message: err.message
+        });
+    };
+});
+
+
+// delete user DELETE
+
+app.delete("/users/:id", async (req: Request, res: Response) => {
+    try {
+        const result = await pool.query(`DELETE FROM users WHERE id = $1`, [req.params.id]);
+
+        if (result.rows.length === 0) {
+            res.status(404).json({
+                success: false,
+                message: "404! User  Not found..!"
+            });
+        }
+
+        else {
+            res.status(200).json({
+                succes: true,
+                message: "User deleted Succesfully...!",
+                data: null,
+            });
+        };
+    }
+
+    catch (err: any) {
+        res.status(500).json({
+            succes: false,
+            message: err.message
+        });
+    };
+});
+
+
+
+
+
+
+
 
 const startServer = async () => {
     try {
