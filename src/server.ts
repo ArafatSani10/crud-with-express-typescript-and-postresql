@@ -1,4 +1,3 @@
-
 import * as dotenv from 'dotenv';
 import path from "path"
 dotenv.config({ path: path.join(process.cwd(), ".env") });
@@ -9,14 +8,12 @@ import { Pool } from "pg"
 const app = express();
 const port = 5000;
 
-// Parser
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const connectionStringValue = process.env.Connection_STR;
 
 if (!connectionStringValue) {
-    console.error("❌ ERROR: Connection_STR environment variable is not set.");
     process.exit(1);
 }
 
@@ -39,7 +36,7 @@ const initDB = async () => {
         `);
 
     await pool.query(`
-        CREATE TABLE IF NOT EXISTS todos(
+        CREATE TABLE IF NOT EXISTS tasks(
             id SERIAL PRIMARY KEY,
             user_id INT REFERENCES users(id) ON DELETE CASCADE,
             title VARCHAR(200) NOT NULL,
@@ -50,7 +47,7 @@ const initDB = async () => {
             updated_at TIMESTAMP DEFAULT NOW()
         )
     `);
-    console.log("✅ Database tables (users & todos) are ensured.");
+    console.log("✅ Database tables (users & tasks) are ensured.");
 };
 
 
@@ -59,7 +56,6 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 
-// users POST CRUD
 app.post("/users", async (req: Request, res: Response) => {
 
     const { name, email } = req.body;
@@ -69,7 +65,7 @@ app.post("/users", async (req: Request, res: Response) => {
 
 
         res.status(201).json({
-            success: false,
+            success: true,
             message: "Data Inserted Successfully",
             data: result.rows[0],
         })
@@ -104,8 +100,6 @@ app.get("/users", async (req: Request, res: Response) => {
     }
 });
 
-// single user get
-
 app.get("/users/:id", async (req: Request, res: Response) => {
     try {
         const result = await pool.query(`SELECT * FROM users WHERE id = $1`, [req.params.id]);
@@ -113,13 +107,13 @@ app.get("/users/:id", async (req: Request, res: Response) => {
         if (result.rows.length === 0) {
             res.status(404).json({
                 success: false,
-                message: "404! User  Not found..!"
+                message: "404! User Not found..!"
             });
         }
 
         else {
             res.status(200).json({
-                succes: true,
+                success: true,
                 message: "User fetched Succesfully...!",
                 data: result.rows[0],
             });
@@ -128,14 +122,12 @@ app.get("/users/:id", async (req: Request, res: Response) => {
 
     catch (err: any) {
         res.status(500).json({
-            succes: false,
+            success: false,
             message: err.message
         });
     };
 });
 
-
-// update user PUT 
 
 app.put("/users/:id", async (req: Request, res: Response) => {
     const { name, email } = req.body;
@@ -145,13 +137,13 @@ app.put("/users/:id", async (req: Request, res: Response) => {
         if (result.rows.length === 0) {
             res.status(404).json({
                 success: false,
-                message: "404! User  Not found..!"
+                message: "404! User Not found..!"
             });
         }
 
         else {
             res.status(200).json({
-                succes: true,
+                success: true,
                 message: "User Updated Succesfully...!",
                 data: result.rows[0],
             });
@@ -160,42 +152,89 @@ app.put("/users/:id", async (req: Request, res: Response) => {
 
     catch (err: any) {
         res.status(500).json({
-            succes: false,
+            success: false,
             message: err.message
         });
     };
 });
 
 
-// delete user DELETE
-
 app.delete("/users/:id", async (req: Request, res: Response) => {
     try {
         const result = await pool.query(`DELETE FROM users WHERE id = $1`, [req.params.id]);
 
-        if (result.rows.length === 0) {
+        if (result.rowCount === 0) {
             res.status(404).json({
                 success: false,
-                message: "404! User  Not found..!"
+                message: "404! User Not found..!"
             });
         }
 
         else {
             res.status(200).json({
-                succes: true,
+                success: true,
                 message: "User deleted Succesfully...!",
-                data: null,
+                data: result.rows,
             });
         };
     }
 
     catch (err: any) {
         res.status(500).json({
-            succes: false,
+            success: false,
             message: err.message
         });
     };
 });
+
+
+
+app.post('/tasks', async (req: Request, res: Response) => {
+    const { user_id, title } = req.body;
+
+    try {
+        // Query-তে todos এর বদলে tasks ব্যবহার করা হয়েছে
+        const result = await pool.query(`INSERT INTO tasks(user_id, title) VALUES($1,$2) RETURNING *`, [user_id, title]);
+
+        res.status(201).json({
+            success: true,
+            message: "TASK created",
+            data: result.rows[0]
+        })
+    }
+
+    catch (err: any) {
+        res.status(500).json({
+            success: false,
+            message: err.message
+        })
+
+    }
+});
+
+
+// get tasks
+
+app.get("/tasks", async (req: Request, res: Response) => {
+    try {
+        const result = await pool.query(`SELECT * FROM tasks`);
+
+        res.status(200).json({
+            success: true,
+            message: "tasks recieved successfully..",
+            data: result.rows,
+        })
+    }
+
+    catch (err: any) {
+        res.status(500).json({
+            success: false,
+            message: err.message
+        })
+
+    }
+});
+
 
 
 
